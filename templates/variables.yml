@@ -1,0 +1,7 @@
+variables:
+  - name: TF_VERSION
+    value: '1.10.5'
+  - name: awsServiceConnection
+    value: 'DoleMS-Freshtrade-Dev-00000000000' # name of the AWS service connection under Project Settings > Service connections
+  - name: awsRegion
+    value: 'eu-west-1'
