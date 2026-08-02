@@ -4,9 +4,9 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "bucket_name" {
-  description = "Name of the S3 bucket"
-  type        = string
+variable "bucket_names" {
+  description = "Names of the S3 buckets to create"
+  type        = list(string)
 }
 
 variable "environment" {

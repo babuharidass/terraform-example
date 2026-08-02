@@ -1,14 +1,14 @@
-output "bucket_id" {
-  description = "ID of the S3 bucket"
-  value       = module.s3_bucket.bucket_id
+output "bucket_ids" {
+  description = "IDs of the S3 buckets, keyed by bucket name"
+  value       = { for name, mod in module.infra : name => mod.bucket_id }
 }
 
-output "bucket_arn" {
-  description = "ARN of the S3 bucket"
-  value       = module.s3_bucket.bucket_arn
+output "bucket_arns" {
+  description = "ARNs of the S3 buckets, keyed by bucket name"
+  value       = { for name, mod in module.infra : name => mod.bucket_arn }
 }
 
-output "bucket_domain_name" {
-  description = "Domain name of the S3 bucket"
-  value       = module.s3_bucket.bucket_domain_name
+output "bucket_domain_names" {
+  description = "Domain names of the S3 buckets, keyed by bucket name"
+  value       = { for name, mod in module.infra : name => mod.bucket_domain_name }
 }

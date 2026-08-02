@@ -13,10 +13,12 @@ provider "aws" {
   region = var.aws_region
 }
 
-module "s3_bucket" {
-  source = "./modules/s3-bucket"
+module "infra" {
+  source = "./modules/s3"
 
-  bucket_name        = var.bucket_name
+  for_each = toset(var.bucket_names)
+
+  bucket_name        = each.value
   environment        = var.environment
   versioning_enabled = var.versioning_enabled
   tags               = var.tags

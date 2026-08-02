@@ -1,0 +1,83 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  - template: templates/variables.yml
+
+stages:
+  - stage: Validate
+    displayName: 'Terraform Validate'
+    jobs:
+      - job: Validate
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - template: templates/install-terraform.yml
+          - script: terraform fmt -check -recursive
+            displayName: 'Terraform fmt check'
+          - script: |
+              terraform init -backend=false
+              terraform validate
+            displayName: 'Terraform init (no backend) + validate'
+
+  - stage: Plan
+    displayName: 'Terraform Plan (dev)'
+    dependsOn: Validate
+    jobs:
+      - job: Plan
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - template: templates/install-terraform.yml
+          - task: AWSShellScript@1
+            displayName: 'Terraform init & plan (AWS creds via service connection)'
+            inputs:
+              awsCredentials: '$(awsServiceConnection)'
+              regionName: '$(awsRegion)'
+              scriptType: 'inline'
+              inlineScript: |
+                set -e
+                terraform init -backend-config=environments/dev.backend.hcl
+                terraform plan \
+                  -var-file=environments/dev.tfvars \
+                  -out=$(Build.ArtifactStagingDirectory)/dev.tfplan
+          - publish: $(Build.ArtifactStagingDirectory)/dev.tfplan
+            artifact: dev-tfplan
+            displayName: 'Publish plan artifact'
+
+  - stage: Apply
+    displayName: 'Terraform Apply (dev)'
+    dependsOn: Plan
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: Apply
+        displayName: 'Apply dev plan'
+        environment: 'dev' # requires manual approval configured on this environment
+        pool:
+          vmImage: ubuntu-latest
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - template: templates/install-terraform.yml
+                - download: current
+                  artifact: dev-tfplan
+                  displayName: 'Download plan artifact'
+                - task: AWSShellScript@1
+                  displayName: 'Terraform init & apply (AWS creds via service connection)'
+                  inputs:
+                    awsCredentials: '$(awsServiceConnection)'
+                    regionName: '$(awsRegion)'
+                    scriptType: 'inline'
+                    inlineScript: |
+                      set -e
+                      terraform init -backend-config=environments/dev.backend.hcl
+                      terraform apply $(Pipeline.Workspace)/dev-tfplan/dev.tfplan
